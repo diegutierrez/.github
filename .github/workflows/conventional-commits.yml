@@ -1,0 +1,43 @@
+# Reusable workflow to validate PR titles follow conventional commits
+# Usage:
+#   jobs:
+#     validate:
+#       uses: diegutierrez/.github/.github/workflows/conventional-commits.yml@main
+
+name: Conventional Commits
+
+on:
+  workflow_call:
+    inputs:
+      require-scope:
+        description: "Require scope in commit message"
+        type: boolean
+        default: false
+
+jobs:
+  validate-pr-title:
+    name: Validate PR Title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR title
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            refactor
+            docs
+            style
+            test
+            chore
+            perf
+            ci
+            build
+            revert
+          requireScope: ${{ inputs.require-scope }}
+          subjectPattern: ^.+$
+          subjectPatternError: |
+            El titulo del PR debe seguir el formato de conventional commits.
+            Ejemplo: "feat: agregar nueva funcionalidad"
