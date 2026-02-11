@@ -1,0 +1,30 @@
+# Reusable workflow for security scanning (secrets detection)
+# Usage:
+#   jobs:
+#     security:
+#       uses: diegutierrez/.github/.github/workflows/security.yml@main
+
+name: Security Scan
+
+on:
+  workflow_call:
+    inputs:
+      only-verified:
+        description: "Only report verified secrets"
+        type: boolean
+        default: true
+
+jobs:
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog secret scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: ${{ inputs.only-verified && '--only-verified' || '' }}
