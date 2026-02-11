@@ -1,0 +1,66 @@
+# Reusable workflow for auto-merging Dependabot PRs
+# Usage:
+#   on:
+#     pull_request:
+#       types: [opened, synchronize]
+#   jobs:
+#     auto-merge:
+#       uses: diegutierrez/.github/.github/workflows/dependabot-auto.yml@main
+#       with:
+#         merge-method: squash
+
+name: Dependabot Auto-merge
+
+on:
+  workflow_call:
+    inputs:
+      merge-method:
+        description: "Merge method to use (merge, squash, rebase)"
+        type: string
+        default: "squash"
+      auto-approve:
+        description: "Auto-approve minor and patch updates"
+        type: boolean
+        default: true
+
+jobs:
+  dependabot-auto:
+    name: Auto-merge Dependabot
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Auto-approve patch and minor updates
+        if: |
+          inputs.auto-approve &&
+          (steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
+           steps.metadata.outputs.update-type == 'version-update:semver-minor')
+        run: gh pr review --approve "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable auto-merge for patch and minor updates
+        if: |
+          steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
+          steps.metadata.outputs.update-type == 'version-update:semver-minor'
+        run: gh pr merge --auto --${{ inputs.merge-method }} "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comment on major updates
+        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
+        run: |
+          gh pr comment "$PR_URL" --body "This PR contains a **major version update**. Please review manually before merging."
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
