@@ -1,0 +1,84 @@
+# Reusable CI workflow for Node.js/TypeScript projects
+# Usage:
+#   jobs:
+#     ci:
+#       uses: diegutierrez/.github/.github/workflows/node-ci.yml@main
+#       with:
+#         working-directory: "frontend"
+#         node-version: "20"
+
+name: Node CI
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: "Node.js version to use"
+        type: string
+        default: "20"
+      working-directory:
+        description: "Directory containing the Node.js project"
+        type: string
+        default: "."
+      run-lint:
+        description: "Run ESLint"
+        type: boolean
+        default: true
+      run-format:
+        description: "Run Prettier format check"
+        type: boolean
+        default: true
+      run-typecheck:
+        description: "Run TypeScript type checking"
+        type: boolean
+        default: true
+      run-build:
+        description: "Run build"
+        type: boolean
+        default: true
+      run-test:
+        description: "Run tests"
+        type: boolean
+        default: false
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: "npm"
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        if: ${{ inputs.run-lint }}
+        run: npm run lint
+
+      - name: Check formatting
+        if: ${{ inputs.run-format }}
+        run: npm run format:check
+
+      - name: Type check
+        if: ${{ inputs.run-typecheck }}
+        run: npm run type-check
+
+      - name: Run tests
+        if: ${{ inputs.run-test }}
+        run: npm test
+
+      - name: Build
+        if: ${{ inputs.run-build }}
+        run: npm run build
